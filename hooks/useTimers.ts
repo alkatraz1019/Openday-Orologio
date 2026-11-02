@@ -5,11 +5,21 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getSupabase } from "@/lib/supabaseClient";
 import type { SettingsRow, TimerRow } from "@/lib/types";
 
+/** Fallback di sicurezza se il realtime si disconnette (query leggere, ogni 60s). */
+const POLL_MS = 60000;
+/** Con la scheda nascosta >90s rilasciamo la connessione realtime (risparmia RAM sul server). */
+const HIDE_RELEASE_MS = 90000;
+
 /**
  * Stato condiviso di tutti i timer, sincronizzato in tempo reale con Supabase.
  * - I tempi sono generati dal server Postgres (nessun problema di orologi sfasati).
  * - `offsetRef` contiene la differenza tra orario server e orario locale:
  *   oraServer ≈ Date.now() + offsetRef.current
+ *
+ * Ottimizzazioni RAM/lato server:
+ * - un solo canale realtime per client (i `settings` cambiano raramente: li copre il polling);
+ * - scheda nascosta >90s → canale chiuso e riaperto al ritorno;
+ * - polling ridotto a 60s.
  */
 export function useTimers() {
   const [timers, setTimers] = useState<TimerRow[]>([]);
@@ -56,19 +66,10 @@ export function useTimers() {
 
   useEffect(() => {
     let cancelled = false;
-    const interval: ReturnType<typeof setInterval> = setInterval(() => {
-      refresh(); // fallback di sicurezza se il realtime si disconnette
-      syncOffset();
-    }, 30000);
-    const onVis = () => {
-      if (document.visibilityState === "visible") refresh();
-    };
-    document.addEventListener("visibilitychange", onVis);
+    let hideTimer: ReturnType<typeof setTimeout> | undefined;
 
-    (async () => {
-      await refresh();
-      if (cancelled) return;
-      await syncOffset();
+    async function ensureChannel() {
+      if (cancelled || channelRef.current) return;
       try {
         const supabase = getSupabase();
         const ch = supabase
@@ -87,32 +88,82 @@ export function useTimers() {
                 return next;
               });
             }
-          })
-          .on("postgres_changes", { event: "*", schema: "public", table: "settings" }, (payload) => {
-            const row = payload.new as SettingsRow | null;
-            if (row && typeof row.total_groups === "number") setTotalGroups(row.total_groups);
           });
+        // Nota: nessun realtime su `settings` (cambia raramente) — lo copre il polling.
         channelRef.current = ch;
         ch.subscribe((status: string) => setConnected(status === "SUBSCRIBED"));
       } catch (err) {
         setConfigError(err instanceof Error ? err.message : "Configurazione mancante");
       }
+    }
+
+    async function dropChannel() {
+      const ch = channelRef.current;
+      channelRef.current = null;
+      setConnected(false);
+      if (ch) {
+        try {
+          await getSupabase().removeChannel(ch);
+        } catch {
+          try {
+            await ch.unsubscribe();
+          } catch {
+            /* ignora */
+          }
+        }
+      }
+    }
+
+    function onVisibility() {
+      if (hideTimer) clearTimeout(hideTimer);
+      if (document.visibilityState === "visible") {
+        void ensureChannel();
+        void refresh();
+      } else {
+        // scheda nascosta: dopo 90s chiude il canale realtime
+        hideTimer = setTimeout(() => {
+          void dropChannel();
+        }, HIDE_RELEASE_MS);
+      }
+    }
+
+    const polling = setInterval(() => {
+      void refresh();
+      void syncOffset();
+    }, POLL_MS);
+
+    document.addEventListener("visibilitychange", onVisibility);
+
+    (async () => {
+      await refresh();
+      if (cancelled) return;
+      await syncOffset();
+      await ensureChannel();
     })();
 
     return () => {
       cancelled = true;
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", onVis);
-      try {
-        void channelRef.current?.unsubscribe();
-      } catch {
-        /* ignora */
+      clearInterval(polling);
+      if (hideTimer) clearTimeout(hideTimer);
+      document.removeEventListener("visibilitychange", onVisibility);
+      const ch = channelRef.current;
+      channelRef.current = null;
+      if (ch) {
+        try {
+          void getSupabase()
+            .removeChannel(ch)
+            .catch(() => {});
+        } catch {
+          /* ignora */
+        }
       }
     };
   }, [refresh, syncOffset]);
 
   const runAction = useCallback(
-    async (fn: (supabase: ReturnType<typeof getSupabase>) => PromiseLike<{ error: { message: string } | null }>) => {
+    async (
+      fn: (supabase: ReturnType<typeof getSupabase>) => PromiseLike<{ error: { message: string } | null }>
+    ) => {
       try {
         const { error } = await fn(getSupabase());
         if (error) setActionError(error.message);
