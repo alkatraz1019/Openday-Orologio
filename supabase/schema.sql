@@ -10,6 +10,7 @@ create table if not exists public.timers (
   materia text,
   duration_seconds integer not null default 600 check (duration_seconds between 1 and 86400),
   remaining_seconds integer not null default 600 check (remaining_seconds between 0 and 86400),
+  sessions_completed integer not null default 0,
   ends_at timestamptz, -- impostato quando il timer è in corso; null = fermo
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -95,6 +96,26 @@ begin
   where id = p_timer_id;
 end $$;
 
+-- Termina il turno: incrementa il contatore dei turni e riporta il timer a nuovo.
+create or replace function public.complete_timer(p_timer_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  r public.timers;
+begin
+  select * into r from public.timers where id = p_timer_id for update;
+  if not found then raise exception 'Timer non trovato'; end if;
+  update public.timers
+    set sessions_completed = sessions_completed + 1,
+        remaining_seconds = duration_seconds,
+        ends_at = null,
+        updated_at = now()
+  where id = p_timer_id;
+end $$;
+
 create or replace function public.adjust_timer(p_timer_id uuid, p_delta_seconds int)
 returns void
 language plpgsql
@@ -131,16 +152,21 @@ as $$
 declare
   n int;
 begin
-  update public.timers set remaining_seconds = duration_seconds, ends_at = null, updated_at = now();
+  update public.timers
+    set remaining_seconds = duration_seconds,
+        sessions_completed = 0,
+        ends_at = null,
+        updated_at = now();
   get diagnostics n = row_count;
   return n;
 end $$;
 
--- Il pubblico può usare le funzioni di avvio/pausa/reset/regolazione...
+-- Il pubblico può usare le funzioni di avvio/pausa/reset/termina/regolazione...
 grant execute on function public.server_time() to anon, authenticated;
 grant execute on function public.start_timer(uuid) to anon, authenticated;
 grant execute on function public.pause_timer(uuid) to anon, authenticated;
 grant execute on function public.reset_timer(uuid) to anon, authenticated;
+grant execute on function public.complete_timer(uuid) to anon, authenticated;
 grant execute on function public.adjust_timer(uuid, int) to anon, authenticated;
 
 -- ...ma NON il reset globale (riservato all'admin via service role).

@@ -20,6 +20,7 @@ export default function HomePage() {
     startTimer,
     pauseTimer,
     resetTimer,
+    completeTimer,
     adjustTimer,
     refresh,
   } = useTimers();
@@ -69,6 +70,9 @@ export default function HomePage() {
     ? new Date(nowMs).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
     : "";
 
+  const activeRooms = timers.filter((t) => t.ends_at && Date.parse(t.ends_at) > nowMs).length;
+  const completedTurns = timers.reduce((acc, t) => acc + (t.sessions_completed ?? 0), 0);
+
   function toggleSound() {
     const next = !soundOn;
     setSoundOn(next);
@@ -110,71 +114,68 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <div className="flex min-h-screen flex-col">
+      <header className="sticky top-0 z-10 border-b border-line bg-surface/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-4 py-3">
-          <div className="mr-auto">
-            <h1 className="text-xl font-black tracking-tight sm:text-2xl">⏱️ Open Day — Timer Aule</h1>
-            <p className="text-xs text-slate-500">
-              {wallClock && <span className="mr-2 tabular-nums">{wallClock}</span>}
-              Sincronizzato in tempo reale su tutti i dispositivi
-            </p>
+          <div className="mr-auto flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-light text-2xl shadow-card">
+              ⏱️
+            </div>
+            <div>
+              <h1 className="font-heading text-xl font-bold leading-tight tracking-tight sm:text-2xl">
+                Open Day — Timer Aule
+              </h1>
+              <p className="text-xs text-muted">
+                {wallClock && <span className="mr-2 font-semibold tabular-nums">{wallClock}</span>}
+                Sincronizzato in tempo reale su tutti i dispositivi
+              </p>
+            </div>
           </div>
-          <span className="rounded-full bg-indigo-100 px-3 py-1.5 text-sm font-bold text-indigo-700">
+          <span className="rounded-full bg-brand-light px-3 py-1.5 text-sm font-bold text-brand-dark">
             👥 Gruppi: {totalGroups === null ? "…" : totalGroups}
           </span>
           <span
             className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
-              connected ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"
+              connected ? "bg-brand-light text-brand-dark" : "bg-line text-muted"
             }`}
           >
             ● {connected ? "Live" : "Connessione…"}
           </span>
-          <button
-            onClick={toggleSound}
-            className="rounded-full bg-slate-100 px-3 py-1.5 text-sm font-semibold hover:bg-slate-200"
-          >
+          <button onClick={toggleSound} className="btn btn-ghost px-3 py-1.5 text-sm">
             {soundOn ? "🔊 Suono" : "🔇 Muto"}
           </button>
           <button
             onClick={toggleWake}
-            className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
-              wakeOn ? "bg-amber-100 text-amber-700" : "bg-slate-100 hover:bg-slate-200"
-            }`}
+            className={`btn px-3 py-1.5 text-sm ${wakeOn ? "bg-warn-light text-warn-dark" : "btn-ghost"}`}
           >
             {wakeOn ? "☀️ Schermo sempre acceso" : "☀️ Tieni schermo acceso"}
           </button>
           {notify !== "granted" && notify !== "unsupported" && (
-            <button
-              onClick={enableNotifications}
-              className="rounded-full bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
-            >
+            <button onClick={enableNotifications} className="btn btn-secondary px-3 py-1.5 text-sm">
               🔔 Attiva notifiche
             </button>
           )}
-          <Link
-            href="/admin"
-            className="rounded-full bg-slate-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-slate-700"
-          >
+          <Link href="/admin" className="btn bg-ink px-3 py-1.5 text-sm text-white hover:opacity-90">
             ⚙️ Admin
           </Link>
         </div>
       </header>
 
       {configError && (
-        <div className="mx-auto max-w-6xl px-4 pt-4">
-          <div className="rounded-xl bg-amber-100 p-4 text-sm text-amber-900">
+        <div className="mx-auto w-full max-w-6xl px-4 pt-4">
+          <div className="rounded-2xl border border-warn/40 bg-warn-light p-4 text-sm text-warn-dark">
             <b>Configurazione mancante.</b> {configError}
             <div className="mt-1">
-              Segui i passaggi nel file <code className="font-mono">README.md</code> (Supabase + variabili d&apos;ambiente).
+              Segui i passaggi nel file <code className="font-mono">README.md</code> (Supabase + variabili
+              d&apos;ambiente).
             </div>
           </div>
         </div>
       )}
 
       {actionError && (
-        <div className="mx-auto max-w-6xl px-4 pt-4">
-          <div className="flex items-center gap-3 rounded-xl bg-red-100 p-3 text-sm text-red-800">
+        <div className="mx-auto w-full max-w-6xl px-4 pt-4">
+          <div className="flex items-center gap-3 rounded-2xl border border-danger/30 bg-danger-light p-3 text-sm text-danger">
             <span>⚠️ {actionError}</span>
             <button onClick={() => refresh()} className="font-semibold underline">
               Riprova
@@ -183,18 +184,40 @@ export default function HomePage() {
         </div>
       )}
 
-      <main className="mx-auto max-w-6xl px-4 py-6">
-        {sorted.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
-            <div className="text-4xl">⏱️</div>
-            <h2 className="mt-2 text-xl font-bold">Nessun timer ancora</h2>
-            <p className="mt-1 text-slate-500">
-              Vai nell&apos;area admin per creare i timer delle aule: appariranno qui su tutti i dispositivi.
-            </p>
-            <Link
-              href="/admin"
-              className="mt-4 inline-block rounded-xl bg-slate-800 px-4 py-2 font-semibold text-white"
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+        {/* Riassunto evento */}
+        <div className="mb-6 grid grid-cols-3 gap-3">
+          <div className="rounded-2xl border border-line bg-surface p-4 shadow-card">
+            <div className="font-heading text-2xl font-bold sm:text-3xl">
+              {totalGroups === null ? "…" : totalGroups}
+            </div>
+            <div className="text-xs text-muted">gruppi totali in visita</div>
+          </div>
+          <div className="rounded-2xl border border-line bg-surface p-4 shadow-card">
+            <div
+              className={`font-heading text-2xl font-bold sm:text-3xl ${activeRooms > 0 ? "text-brand-dark" : ""}`}
             >
+              {activeRooms}
+            </div>
+            <div className="text-xs text-muted">aule attive adesso</div>
+          </div>
+          <div className="rounded-2xl border border-line bg-surface p-4 shadow-card">
+            <div className="font-heading text-2xl font-bold text-brand-dark sm:text-3xl">
+              ✓ {completedTurns}
+            </div>
+            <div className="text-xs text-muted">turni completati</div>
+          </div>
+        </div>
+
+        {sorted.length === 0 ? (
+          <div className="rounded-2xl border border-line bg-surface p-10 text-center shadow-card">
+            <div className="text-5xl">⏱️</div>
+            <h2 className="font-heading mt-3 text-2xl font-bold">Nessun timer ancora</h2>
+            <p className="mx-auto mt-2 max-w-md text-muted">
+              Crea i timer delle aule dall&apos;area admin: appariranno qui su tutti i dispositivi in tempo
+              reale.
+            </p>
+            <Link href="/admin" className="btn btn-primary mt-5">
               ⚙️ Apri Admin
             </Link>
           </div>
@@ -205,9 +228,11 @@ export default function HomePage() {
                 key={t.id}
                 timer={t}
                 nowMs={nowMs}
+                totalGroups={totalGroups}
                 onStart={startTimer}
                 onPause={pauseTimer}
                 onReset={resetTimer}
+                onComplete={completeTimer}
                 onAdjust={adjustTimer}
               />
             ))}
@@ -215,10 +240,11 @@ export default function HomePage() {
         )}
       </main>
 
-      <footer className="mx-auto max-w-6xl px-4 pb-10 text-xs text-slate-400">
+      <footer className="mx-auto w-full max-w-6xl px-4 pb-10 text-xs text-muted">
         Suggerimento: tieni questa pagina aperta sui telefoni di ogni aula. Quando un timer scade suona
-        l&apos;avviso (suono + vibrazione + notifica, se attivi su quel dispositivo). Nessun dato viene
-        azzerato automaticamente: il reset è solo manuale dall&apos;area admin.
+        l&apos;avviso (suono + vibrazione + notifica, se attivi). Quando il turno finisce davvero, premi
+        «✓ Termina turno»: il contatore dell&apos;aula si aggiorna per tutti. Nessun dato viene azzerato in
+        automatico.
       </footer>
     </div>
   );

@@ -8,11 +8,6 @@ import { useTimers } from "@/hooks/useTimers";
 
 const PRESETS = [5, 10, 15, 20, 30];
 
-const inputCls =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400";
-const btnSmall =
-  "rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold hover:bg-slate-200 disabled:opacity-50";
-
 function partsOf(totalSeconds: number) {
   return { m: Math.floor(totalSeconds / 60), s: totalSeconds % 60 };
 }
@@ -202,7 +197,12 @@ export default function AdminPage() {
   }
 
   async function resetAll() {
-    if (!confirm("Azzerare TUTTI i timer? Ogni timer tornerà alla durata completa e si fermerà.")) return;
+    if (
+      !confirm(
+        "Azzerare TUTTI i timer? Ogni timer tornerà alla durata completa, si fermerà e il conteggio dei turni tornerà a zero."
+      )
+    )
+      return;
     setBusy(true);
     try {
       const res = await api("/api/admin/reset-all", "POST");
@@ -225,7 +225,7 @@ export default function AdminPage() {
   if (configError) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-16">
-        <div className="rounded-xl bg-amber-100 p-6 text-sm text-amber-900">
+        <div className="rounded-2xl border border-warn/40 bg-warn-light p-6 text-sm text-warn-dark">
           <b className="text-base">Configurazione mancante.</b>
           <p className="mt-2">{configError}</p>
           <p className="mt-2">
@@ -244,10 +244,13 @@ export default function AdminPage() {
       <div className="flex min-h-screen items-center justify-center p-4">
         <form
           onSubmit={submitLogin}
-          className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+          className="w-full max-w-sm rounded-2xl border border-line bg-surface p-6 shadow-pop"
         >
-          <h1 className="text-xl font-black">⚙️ Area Admin</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-light text-2xl">
+            ⚙️
+          </div>
+          <h1 className="font-heading mt-3 text-xl font-bold">Area Admin</h1>
+          <p className="mt-1 text-sm text-muted">
             Inserisci la password condivisa per gestire i timer.
           </p>
           <input
@@ -255,17 +258,14 @@ export default function AdminPage() {
             value={pwd}
             onChange={(e) => setPwd(e.target.value)}
             placeholder="Password"
-            className={`${inputCls} mt-4`}
+            className="input mt-4 w-full"
             autoFocus
           />
-          {authError && <p className="mt-2 text-sm font-semibold text-red-600">{authError}</p>}
-          <button
-            type="submit"
-            className="mt-4 w-full rounded-xl bg-slate-900 py-2.5 font-bold text-white hover:bg-slate-800"
-          >
+          {authError && <p className="mt-2 text-sm font-semibold text-danger">{authError}</p>}
+          <button type="submit" className="btn btn-primary mt-4 w-full">
             Entra
           </button>
-          <Link href="/" className="mt-3 block text-center text-sm text-slate-500 hover:underline">
+          <Link href="/" className="mt-3 block text-center text-sm text-muted hover:underline">
             ← Torna ai timer
           </Link>
         </form>
@@ -280,13 +280,16 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-slate-200 bg-white">
+      <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3">
-          <h1 className="mr-auto text-lg font-black">⚙️ Admin — Open Day Timer</h1>
-          <Link href="/" className="text-sm font-semibold text-slate-600 hover:underline">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-light text-lg">
+            ⚙️
+          </div>
+          <h1 className="font-heading mr-auto text-lg font-bold">Admin — Open Day Timer</h1>
+          <Link href="/" className="btn btn-ghost px-3 py-1.5 text-sm">
             ← Timer
           </Link>
-          <button onClick={logout} className="text-sm font-semibold text-slate-600 hover:underline">
+          <button onClick={logout} className="btn btn-ghost px-3 py-1.5 text-sm">
             Esci
           </button>
         </div>
@@ -295,8 +298,10 @@ export default function AdminPage() {
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
         {msg && (
           <div
-            className={`rounded-xl p-3 text-sm font-semibold ${
-              msg.type === "ok" ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+            className={`rounded-2xl p-3 text-sm font-semibold ${
+              msg.type === "ok"
+                ? "border border-brand/30 bg-brand-light text-brand-dark"
+                : "border border-danger/30 bg-danger-light text-danger"
             }`}
           >
             {msg.text}
@@ -304,12 +309,13 @@ export default function AdminPage() {
         )}
 
         {/* IMPOSTAZIONI */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h2 className="text-lg font-bold">Impostazioni evento</h2>
+        <section className="rounded-2xl border border-line bg-surface p-5 shadow-card">
+          <h2 className="font-heading text-lg font-bold">Impostazioni evento</h2>
           <form onSubmit={saveGroups} className="mt-3 flex flex-wrap items-end gap-3">
             <label className="block min-w-[220px] flex-1">
-              <span className="text-xs font-semibold text-slate-500">
-                Numero totale di gruppi in visita (mostrato sulla schermata principale)
+              <span className="text-xs font-semibold text-muted">
+                Numero totale di gruppi in visita — usato per il badge e per calcolare quanti turni
+                mancano a ogni aula
               </span>
               <input
                 type="number"
@@ -317,40 +323,32 @@ export default function AdminPage() {
                 max={999}
                 value={groups}
                 onChange={(e) => setGroups(e.target.value)}
-                className={`${inputCls} mt-1`}
+                className="input mt-1 w-full"
               />
             </label>
-            <button
-              type="submit"
-              disabled={busy}
-              className="rounded-xl bg-indigo-600 px-4 py-2.5 font-bold text-white hover:bg-indigo-500 disabled:opacity-50"
-            >
+            <button type="submit" disabled={busy} className="btn btn-primary">
               Salva
             </button>
           </form>
 
-          <div className="mt-4 border-t border-slate-100 pt-4">
-            <button
-              onClick={resetAll}
-              disabled={busy}
-              className="rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500 disabled:opacity-50"
-            >
+          <div className="mt-4 border-t border-line pt-4">
+            <button onClick={resetAll} disabled={busy} className="btn btn-danger text-sm">
               ↺ Azzera tutti i timer
             </button>
-            <p className="mt-1 text-xs text-slate-400">
-              Riporta ogni timer alla durata completa e lo ferma. Nessun timer viene eliminato. Nessun
-              azzeramento avviene mai in automatico.
+            <p className="mt-1 text-xs text-muted">
+              Riporta ogni timer alla durata completa, lo ferma e azzera i contatori dei turni. Nessun
+              timer viene eliminato. Nessun azzeramento avviene mai in automatico.
             </p>
           </div>
         </section>
 
         {/* CREAZIONE */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h2 className="text-lg font-bold">Aggiungi timer</h2>
+        <section className="rounded-2xl border border-line bg-surface p-5 shadow-card">
+          <h2 className="font-heading text-lg font-bold">Aggiungi timer</h2>
           <form onSubmit={createTimer} className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="text-xs font-semibold text-slate-500">Aula</span>
-              <select value={aula} onChange={(e) => setAula(e.target.value)} className={`${inputCls} mt-1`}>
+              <span className="text-xs font-semibold text-muted">Aula</span>
+              <select value={aula} onChange={(e) => setAula(e.target.value)} className="select mt-1 w-full">
                 {CLASSROOMS.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -359,19 +357,19 @@ export default function AdminPage() {
               </select>
             </label>
             <label className="block">
-              <span className="text-xs font-semibold text-slate-500">Materia in corso (facoltativa)</span>
+              <span className="text-xs font-semibold text-muted">Materia in corso (facoltativa)</span>
               <input
                 type="text"
                 value={materia}
                 onChange={(e) => setMateria(e.target.value)}
                 maxLength={120}
                 placeholder="es. Robotica base"
-                className={`${inputCls} mt-1`}
+                className="input mt-1 w-full"
               />
             </label>
 
             <div className="sm:col-span-2">
-              <span className="text-xs font-semibold text-slate-500">Durate rapide</span>
+              <span className="text-xs font-semibold text-muted">Durate rapide</span>
               <div className="mt-1 flex flex-wrap gap-2">
                 {PRESETS.map((p) => (
                   <button
@@ -381,7 +379,7 @@ export default function AdminPage() {
                       setNewMin(String(p));
                       setNewSec("0");
                     }}
-                    className={btnSmall}
+                    className="btn btn-ghost px-3 py-2 text-sm"
                   >
                     {p} min
                   </button>
@@ -390,89 +388,110 @@ export default function AdminPage() {
             </div>
 
             <label className="block">
-              <span className="text-xs font-semibold text-slate-500">Minuti</span>
+              <span className="text-xs font-semibold text-muted">Minuti</span>
               <input
                 type="number"
                 min={0}
                 max={1439}
                 value={newMin}
                 onChange={(e) => setNewMin(e.target.value)}
-                className={`${inputCls} mt-1`}
+                className="input mt-1 w-full"
               />
             </label>
             <label className="block">
-              <span className="text-xs font-semibold text-slate-500">Secondi</span>
+              <span className="text-xs font-semibold text-muted">Secondi</span>
               <input
                 type="number"
                 min={0}
                 max={59}
                 value={newSec}
                 onChange={(e) => setNewSec(e.target.value)}
-                className={`${inputCls} mt-1`}
+                className="input mt-1 w-full"
               />
             </label>
 
             <div className="sm:col-span-2">
-              <button
-                type="submit"
-                disabled={busy}
-                className="rounded-xl bg-emerald-600 px-4 py-2.5 font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
-              >
+              <button type="submit" disabled={busy} className="btn btn-primary">
                 ＋ Crea timer
               </button>
-              <p className="mt-1 text-xs text-slate-400">Un solo timer per aula: i timer appaiono subito sulla schermata principale.</p>
+              <p className="mt-1 text-xs text-muted">
+                Un solo timer per aula: i timer appaiono subito sulla schermata principale.
+              </p>
             </div>
           </form>
         </section>
 
         {/* ELENCO */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h2 className="text-lg font-bold">Timer esistenti ({timers.length})</h2>
+        <section className="rounded-2xl border border-line bg-surface p-5 shadow-card">
+          <h2 className="font-heading text-lg font-bold">Timer esistenti ({timers.length})</h2>
           {timers.length === 0 && (
-            <p className="mt-2 text-sm text-slate-400">Nessun timer. Creane uno qui sopra.</p>
+            <p className="mt-2 text-sm text-muted">Nessun timer. Creane uno qui sopra.</p>
           )}
-          <ul className="mt-3 divide-y divide-slate-100">
+          <ul className="mt-3 divide-y divide-line">
             {sortedTimers.map((t) => {
               const endsMs = t.ends_at ? Date.parse(t.ends_at) : null;
               const rem =
-                endsMs !== null ? Math.ceil((endsMs - (tick + offsetRef.current)) / 1000) : t.remaining_seconds;
-              const status = endsMs !== null ? (rem <= 0 ? "⏰ Scaduto" : "▶ In corso") : t.remaining_seconds === 0 ? "Finito" : t.remaining_seconds !== t.duration_seconds ? "⏸ In pausa" : "In attesa";
+                endsMs !== null
+                  ? Math.ceil((endsMs - (tick + offsetRef.current)) / 1000)
+                  : t.remaining_seconds;
+              const status =
+                endsMs !== null
+                  ? rem <= 0
+                    ? "⏰ Scaduto"
+                    : "▶ In corso"
+                  : t.remaining_seconds === 0
+                    ? "Finito"
+                    : t.remaining_seconds !== t.duration_seconds
+                      ? "⏸ In pausa"
+                      : "In attesa";
 
               return (
                 <li key={t.id} className="flex flex-wrap items-center gap-3 py-3">
                   <div className="min-w-[140px]">
-                    <div className="font-bold">{t.aula}</div>
-                    <div className="text-xs text-slate-500">{t.materia ?? "—"}</div>
+                    <div className="font-heading font-bold">{t.aula}</div>
+                    <div className="text-xs text-muted">{t.materia ?? "—"}</div>
                   </div>
-                  <div className="w-16 text-sm font-bold tabular-nums">{formatCountdown(Math.max(0, rem))}</div>
-                  <span className="text-xs font-semibold text-slate-500">{status}</span>
-                  <span className="text-xs text-slate-400">durata {formatDuration(t.duration_seconds)}</span>
+                  <div className="w-16 text-sm font-bold tabular-nums">
+                    {formatCountdown(Math.max(0, rem))}
+                  </div>
+                  <span className="text-xs font-semibold text-muted">{status}</span>
+                  <span className="rounded-full bg-brand-light px-2 py-0.5 text-xs font-semibold text-brand-dark">
+                    ✓ {t.sessions_completed ?? 0} turni
+                  </span>
+                  <span className="text-xs text-muted">durata {formatDuration(t.duration_seconds)}</span>
                   <div className="ml-auto flex gap-2">
                     {editId === t.id ? (
-                      <button onClick={() => setEditId(null)} className={btnSmall}>
+                      <button onClick={() => setEditId(null)} className="btn btn-ghost px-3 py-2 text-sm">
                         Chiudi
                       </button>
                     ) : (
-                      <button onClick={() => startEdit(t.id, t.aula, t.materia, t.duration_seconds)} className={btnSmall}>
+                      <button
+                        onClick={() => startEdit(t.id, t.aula, t.materia, t.duration_seconds)}
+                        className="btn btn-ghost px-3 py-2 text-sm"
+                      >
                         Modifica
                       </button>
                     )}
-                    <button onClick={() => resetTimer(t.id)} className={btnSmall}>
+                    <button onClick={() => resetTimer(t.id)} className="btn btn-ghost px-3 py-2 text-sm">
                       Azzera
                     </button>
                     <button
                       onClick={() => removeTimer(t.id, t.aula)}
-                      className="rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-100"
+                      className="btn border border-danger/30 bg-danger-light px-3 py-2 text-sm text-danger hover:bg-danger hover:text-white"
                     >
                       Elimina
                     </button>
                   </div>
 
                   {editId === t.id && (
-                    <div className="grid w-full gap-3 rounded-xl bg-slate-50 p-3 sm:grid-cols-2">
+                    <div className="grid w-full gap-3 rounded-2xl bg-canvas p-3 sm:grid-cols-2">
                       <label className="block">
-                        <span className="text-xs font-semibold text-slate-500">Aula</span>
-                        <select value={editAula} onChange={(e) => setEditAula(e.target.value)} className={`${inputCls} mt-1`}>
+                        <span className="text-xs font-semibold text-muted">Aula</span>
+                        <select
+                          value={editAula}
+                          onChange={(e) => setEditAula(e.target.value)}
+                          className="select mt-1 w-full"
+                        >
                           {CLASSROOMS.map((c) => (
                             <option key={c} value={c}>
                               {c}
@@ -481,17 +500,17 @@ export default function AdminPage() {
                         </select>
                       </label>
                       <label className="block">
-                        <span className="text-xs font-semibold text-slate-500">Materia</span>
+                        <span className="text-xs font-semibold text-muted">Materia</span>
                         <input
                           type="text"
                           value={editMateria}
                           onChange={(e) => setEditMateria(e.target.value)}
                           maxLength={120}
-                          className={`${inputCls} mt-1`}
+                          className="input mt-1 w-full"
                         />
                       </label>
                       <div className="sm:col-span-2">
-                        <span className="text-xs font-semibold text-slate-500">Durate rapide</span>
+                        <span className="text-xs font-semibold text-muted">Durate rapide</span>
                         <div className="mt-1 flex flex-wrap gap-2">
                           {PRESETS.map((p) => (
                             <button
@@ -501,7 +520,7 @@ export default function AdminPage() {
                                 setEditMin(String(p));
                                 setEditSec("0");
                               }}
-                              className={btnSmall}
+                              className="btn btn-ghost px-3 py-2 text-sm"
                             >
                               {p} min
                             </button>
@@ -509,39 +528,39 @@ export default function AdminPage() {
                         </div>
                       </div>
                       <label className="block">
-                        <span className="text-xs font-semibold text-slate-500">Minuti</span>
+                        <span className="text-xs font-semibold text-muted">Minuti</span>
                         <input
                           type="number"
                           min={0}
                           max={1439}
                           value={editMin}
                           onChange={(e) => setEditMin(e.target.value)}
-                          className={`${inputCls} mt-1`}
+                          className="input mt-1 w-full"
                         />
                       </label>
                       <label className="block">
-                        <span className="text-xs font-semibold text-slate-500">Secondi</span>
+                        <span className="text-xs font-semibold text-muted">Secondi</span>
                         <input
                           type="number"
                           min={0}
                           max={59}
                           value={editSec}
                           onChange={(e) => setEditSec(e.target.value)}
-                          className={`${inputCls} mt-1`}
+                          className="input mt-1 w-full"
                         />
                       </label>
-                      <div className="flex gap-2 sm:col-span-2">
+                      <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
                         <button
                           onClick={saveEdit}
                           disabled={busy}
-                          className="rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
+                          className="btn btn-primary text-sm"
                         >
                           Salva
                         </button>
-                        <button onClick={() => setEditId(null)} className={btnSmall}>
+                        <button onClick={() => setEditId(null)} className="btn btn-ghost text-sm">
                           Annulla
                         </button>
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs text-muted">
                           Se cambi la durata, il timer si ferma e riparte dalla nuova durata.
                         </p>
                       </div>

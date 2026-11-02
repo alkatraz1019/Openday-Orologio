@@ -7,13 +7,25 @@ type Props = {
   timer: TimerRow;
   /** Istante corrente regolato sull'orologio del server (epoch ms) */
   nowMs: number;
+  /** Numero totale di gruppi impostato da admin (null = non ancora caricato) */
+  totalGroups: number | null;
   onStart: (id: string) => void;
   onPause: (id: string) => void;
   onReset: (id: string) => void;
+  onComplete: (id: string) => void;
   onAdjust: (id: string, delta: number) => void;
 };
 
-export default function TimerCard({ timer, nowMs, onStart, onPause, onReset, onAdjust }: Props) {
+export default function TimerCard({
+  timer,
+  nowMs,
+  totalGroups,
+  onStart,
+  onPause,
+  onReset,
+  onComplete,
+  onAdjust,
+}: Props) {
   const endsMs = timer.ends_at ? Date.parse(timer.ends_at) : null;
   const isRunning = endsMs !== null;
   const remaining = isRunning
@@ -21,57 +33,91 @@ export default function TimerCard({ timer, nowMs, onStart, onPause, onReset, onA
     : timer.remaining_seconds;
   const expired = remaining <= 0;
   const shown = Math.max(0, remaining);
+  const overdueSec = expired ? Math.abs(Math.min(0, remaining)) : 0;
   const progress = Math.min(1, Math.max(0, 1 - shown / Math.max(1, timer.duration_seconds)));
   const runningLow = isRunning && !expired && remaining <= 60;
 
+  const completed = timer.sessions_completed ?? 0;
+  const missing =
+    totalGroups !== null && totalGroups > 0 ? Math.max(totalGroups - completed, 0) : null;
+  const allDone = missing !== null && missing === 0;
+
   let pill = "In attesa";
-  let pillCls = "bg-slate-200 text-slate-600";
-  let cardCls = "bg-white";
+  let pillCls = "bg-line text-muted";
+  let cardCls = "border-line bg-surface";
   if (expired) {
     pill = "⏰ Tempo scaduto";
-    pillCls = "bg-red-600 text-white";
-    cardCls = "bg-red-50 animate-flash";
+    pillCls = "bg-danger text-white";
+    cardCls = "animate-flash border-danger/50";
   } else if (isRunning) {
     pill = "In corso";
-    pillCls = runningLow ? "bg-amber-500 text-white" : "bg-emerald-600 text-white";
-    cardCls = runningLow ? "bg-amber-50" : "bg-white ring-2 ring-emerald-200";
+    pillCls = runningLow ? "bg-warn text-white" : "bg-brand text-white";
+    cardCls = runningLow ? "border-warn/50 bg-warn-light" : "border-brand/40 bg-surface";
   } else if (timer.remaining_seconds !== timer.duration_seconds) {
     pill = "In pausa";
-    pillCls = "bg-sky-100 text-sky-700";
+    pillCls = "bg-sky-light text-ink";
   }
 
   const barCls = expired
-    ? "bg-red-500"
+    ? "bg-danger"
     : runningLow
-      ? "bg-amber-500"
+      ? "bg-warn"
       : isRunning
-        ? "bg-emerald-500"
-        : "bg-slate-300";
+        ? "bg-brand"
+        : timer.remaining_seconds !== timer.duration_seconds
+          ? "bg-sky"
+          : "bg-line";
+
   const digitsCls = expired
-    ? "text-red-600 animate-blink"
+    ? "text-danger animate-blink"
     : runningLow
-      ? "text-amber-600"
+      ? "text-warn-dark"
       : isRunning
-        ? "text-emerald-700"
-        : "text-slate-700";
+        ? "text-brand-dark"
+        : "text-ink/80";
 
   return (
-    <div className={`flex flex-col rounded-2xl p-4 shadow-sm transition-colors sm:p-5 ${cardCls}`}>
+    <div className={`flex animate-fadeUp flex-col rounded-2xl border p-4 shadow-card sm:p-5 ${cardCls}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="truncate text-xl font-extrabold tracking-tight sm:text-2xl">{timer.aula}</div>
-          <div className="h-5 truncate text-sm text-slate-500">{timer.materia ?? "\u00a0"}</div>
+          <div className="font-heading truncate text-2xl font-bold leading-tight">{timer.aula}</div>
+          <div className="h-5 truncate text-sm text-muted">{timer.materia ?? "\u00a0"}</div>
         </div>
-        <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-bold ${pillCls}`}>{pill}</span>
+        <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${pillCls}`}>{pill}</span>
+      </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+        <span
+          className={`rounded-full px-2 py-0.5 font-semibold ${
+            allDone ? "bg-brand-light text-brand-dark" : "bg-line/70 text-muted"
+          }`}
+        >
+          ✓ {completed} {completed === 1 ? "turno" : "turni"}
+        </span>
+        {missing !== null &&
+          (allDone ? (
+            <span className="rounded-full bg-brand-light px-2 py-0.5 font-semibold text-brand-dark">
+              🎉 tutti i gruppi passati
+            </span>
+          ) : (
+            <span className="rounded-full bg-line/70 px-2 py-0.5 font-semibold text-muted">
+              mancano {missing}
+            </span>
+          ))}
       </div>
 
       <div
-        className={`mt-3 text-center text-6xl font-black leading-none tabular-nums sm:text-7xl ${digitsCls}`}
+        className={`mt-3 text-center font-heading text-6xl font-bold leading-none tabular-nums sm:text-7xl ${digitsCls}`}
       >
         {formatCountdown(shown)}
       </div>
+      {expired && overdueSec > 5 && (
+        <p className="mt-1 text-center text-sm font-semibold text-danger">
+          in ritardo di +{formatCountdown(overdueSec)}
+        </p>
+      )}
 
-      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200/80">
+      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-line">
         <div
           className={`h-full rounded-full transition-all duration-500 ${barCls}`}
           style={{ width: `${progress * 100}%` }}
@@ -80,23 +126,20 @@ export default function TimerCard({ timer, nowMs, onStart, onPause, onReset, onA
 
       <div className="mt-4">
         {expired ? (
-          <button
-            onClick={() => onReset(timer.id)}
-            className="w-full rounded-xl bg-red-600 py-3 text-lg font-bold text-white transition hover:bg-red-500 active:scale-[0.98]"
-          >
-            ↺ Azzera
+          <button onClick={() => onComplete(timer.id)} className="btn btn-primary w-full text-lg">
+            ✓ Termina turno
           </button>
         ) : !isRunning ? (
           <button
             onClick={() => onStart(timer.id)}
-            className="w-full rounded-xl bg-emerald-600 py-3 text-lg font-bold text-white transition hover:bg-emerald-500 active:scale-[0.98]"
+            className="btn btn-primary w-full text-lg"
           >
             ▶ {timer.remaining_seconds !== timer.duration_seconds ? "Riprendi" : "Avvia"}
           </button>
         ) : (
           <button
             onClick={() => onPause(timer.id)}
-            className="w-full rounded-xl bg-amber-500 py-3 text-lg font-bold text-white transition hover:bg-amber-400 active:scale-[0.98]"
+            className="btn w-full bg-warn text-lg text-white hover:bg-warn-dark"
           >
             ⏸ Pausa
           </button>
@@ -104,24 +147,35 @@ export default function TimerCard({ timer, nowMs, onStart, onPause, onReset, onA
       </div>
 
       <div className="mt-2 grid grid-cols-3 gap-2">
-        <button
-          onClick={() => onAdjust(timer.id, -60)}
-          className="rounded-lg bg-slate-100 py-2 text-sm font-semibold hover:bg-slate-200"
-        >
-          −1 min
-        </button>
-        <button
-          onClick={() => onAdjust(timer.id, 60)}
-          className="rounded-lg bg-slate-100 py-2 text-sm font-semibold hover:bg-slate-200"
-        >
-          +1 min
-        </button>
-        <button
-          onClick={() => onReset(timer.id)}
-          className="rounded-lg bg-slate-100 py-2 text-sm font-semibold hover:bg-slate-200"
-        >
-          ↺ Reset
-        </button>
+        {expired ? (
+          <button onClick={() => onReset(timer.id)} className="btn btn-ghost col-span-3 text-sm">
+            ↺ Annulla (senza contare il turno)
+          </button>
+        ) : !isRunning && timer.remaining_seconds === timer.duration_seconds ? (
+          <>
+            <button onClick={() => onAdjust(timer.id, -60)} className="btn btn-ghost text-sm">
+              −1 min
+            </button>
+            <button onClick={() => onAdjust(timer.id, 60)} className="btn btn-ghost text-sm">
+              +1 min
+            </button>
+            <button onClick={() => onReset(timer.id)} className="btn btn-ghost text-sm">
+              ↺ Reset
+            </button>
+          </>
+        ) : (
+          <>
+            <button onClick={() => onComplete(timer.id)} className="btn btn-ghost text-sm">
+              ✓ Termina
+            </button>
+            <button onClick={() => onAdjust(timer.id, -60)} className="btn btn-ghost text-sm">
+              −1 min
+            </button>
+            <button onClick={() => onAdjust(timer.id, 60)} className="btn btn-ghost text-sm">
+              +1 min
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

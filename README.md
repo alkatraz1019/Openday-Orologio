@@ -7,6 +7,8 @@ Timer **condivisi in tempo reale** per coordinare gli open day scolastici: un ti
 - **Schermata principale** (`/`) con tutti i timer ordinati per aula: A1, A2, A3, STEAM, ARTE, MATEMATICA, ROBOTICA, LABORATORIO
 - Ogni timer mostra l'**aula**, la **materia in corso** (testo libero) e il **countdown grande**
 - **Avvia / Pausa / Riprendi / Reset / ±1 min** da qualsiasi dispositivo → visibile subito da tutti
+- **Contatore dei turni**: quando un turno finisce, premi «✓ Termina turno» e il contatore dell'aula si aggiorna per tutti — ogni aula vede quanti turni ha completato e quanti ne mancano
+- Barra riassuntiva in cima: gruppi totali, aule attive adesso, turni completati
 - **Avvisi a fine timer**: 🔊 suono + 📳 vibrazione (Android) + 🔔 notifica di sistema (se permessi concessi)
 - Badge **"👥 Gruppi"** con il numero totale di gruppi in visita
 - **Area admin** (`/admin`) protetta da password: crea, modifica, elimina timer, imposta i gruppi totali, azzera tutto
@@ -60,7 +62,7 @@ Apri [http://localhost:3000](http://localhost:3000) (schermata principale) e [ht
 3. Su ogni dispositivo: tocca **🔊 Suono** per attivare l'audio e **🔔 Attiva notifiche** (i browser richiedono un gesto dell'utente prima di riprodurre suoni)
 4. All'inizio di ogni attività, chi è in aula preme **▶ Avvia** sul proprio timer: tutti vedono il countdown partire
 5. A fine timer: suono + vibrazione + notifica su tutti i dispositivi con la pagina aperta, la card lampeggia in rosso
-6. Se un'attività va oltre: **+1 min**; se finisce in anticipo: **Pausa** o **Reset**
+6. Se un'attività va oltre: **+1 min**; se finisce in anticipo: **Pausa** o **Reset**; quando il gruppo cambia aula: **✓ Termina turno** (incrementa il contatore dell'aula)
 7. A fine giornata: /admin → **Azzera tutti i timer** (o elimina i timer per ricrearli da zero l'anno dopo)
 
 ## Note e limiti
@@ -76,12 +78,15 @@ Apri [http://localhost:3000](http://localhost:3000) (schermata principale) e [ht
 
 ```
 app/
-  page.tsx              # schermata principale (grid dei timer)
+  page.tsx              # schermata principale (grid dei timer + riassunto evento)
   admin/page.tsx        # area admin protetta da password
   api/admin/...         # API protette: login, timers, settings, reset-all
 components/TimerCard.tsx
 hooks/useTimers.ts      # realtime Supabase + fallback polling + offset orologio server
 hooks/useTimerAlerts.ts # suono/vibrazione/notifica a scadenza (una volta per scadenza)
 lib/                    # client Supabase, auth admin, suoni, utilità
-supabase/schema.sql     # tabelle, RLS, RPC, realtime
+supabase/schema.sql     # tabelle, RLS, RPC, realtime (installazione completa)
+supabase/migration-turni.sql  # migrazione per DB esistenti: contatore turni
 ```
+
+> Nota: se il database esisteva prima dell'aggiunta dei turni, esegui `supabase/migration-turni.sql` nel SQL Editor di Supabase.

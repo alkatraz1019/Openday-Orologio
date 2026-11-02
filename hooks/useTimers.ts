@@ -136,6 +136,11 @@ export function useTimers() {
     (id: string) => runAction((s) => s.rpc("reset_timer", { p_timer_id: id })),
     [runAction]
   );
+  /** Termina il turno: incrementa il contatore e riporta il timer a nuovo. */
+  const completeTimer = useCallback(
+    (id: string) => runAction((s) => s.rpc("complete_timer", { p_timer_id: id })),
+    [runAction]
+  );
   const adjustTimer = useCallback(
     (id: string, delta: number) =>
       runAction((s) => s.rpc("adjust_timer", { p_timer_id: id, p_delta_seconds: delta })),
@@ -152,6 +157,7 @@ export function useTimers() {
     startTimer,
     pauseTimer,
     resetTimer,
+    completeTimer,
     adjustTimer,
     refresh,
   };

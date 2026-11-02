@@ -2,6 +2,94 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --background: #f7f8f6;
+  --foreground: #212934;
+  --brand: #65bc7b;
+  --brand-dark: #4a9a5e;
+  --danger: #e2574c;
+  --line: #e3e4e1;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+::selection {
+  background: rgba(101, 188, 123, 0.35);
+}
+
+/* ---------- Bottoni ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 0.9rem;
+  padding: 0.8rem 1.1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: transform 0.1s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.btn-primary {
+  background: var(--brand);
+  color: #ffffff;
+}
+.btn-primary:hover {
+  background: var(--brand-dark);
+}
+
+.btn-secondary {
+  background: #569ff7;
+  color: #ffffff;
+}
+.btn-secondary:hover {
+  background: #3f8ef0;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #ffffff;
+}
+.btn-danger:hover {
+  background: #d0483d;
+}
+
+.btn-ghost {
+  background: #eceeec;
+  color: var(--foreground);
+}
+.btn-ghost:hover {
+  background: #e1e3e0;
+}
+
+/* ---------- Input ---------- */
+.input,
+.select {
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.95rem;
+  color: var(--foreground);
+}
+.input:focus,
+.select:focus {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
 }
