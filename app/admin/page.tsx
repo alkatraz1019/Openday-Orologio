@@ -13,7 +13,8 @@ function partsOf(totalSeconds: number) {
 }
 
 export default function AdminPage() {
-  const { timers, totalGroups, configError, offsetRef, resetTimer, refresh } = useTimers();
+  const { timers, totalGroups, configError, actionError, offsetRef, resetTimer, refresh } =
+    useTimers();
 
   const [authed, setAuthed] = useState(false);
   const [pwd, setPwd] = useState("");
@@ -305,6 +306,15 @@ export default function AdminPage() {
             }`}
           >
             {msg.text}
+          </div>
+        )}
+
+        {actionError && (
+          <div className="flex items-center gap-3 rounded-2xl border border-danger/30 bg-danger-light p-3 text-sm text-danger">
+            <span>⚠️ {actionError}</span>
+            <button onClick={() => refresh()} className="font-semibold underline">
+              Riprova
+            </button>
           </div>
         )}
 

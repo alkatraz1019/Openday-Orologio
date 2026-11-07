@@ -39,11 +39,14 @@ as $$
 declare
   n int;
 begin
+  -- "where true" è richiesto: Supabase ha pg-safeupdate attivo e blocca gli
+  -- UPDATE senza WHERE, anche dentro le funzioni security definer.
   update public.timers
     set remaining_seconds = duration_seconds,
         sessions_completed = 0,
         ends_at = null,
-        updated_at = now();
+        updated_at = now()
+    where true;
   get diagnostics n = row_count;
   return n;
 end $$;
